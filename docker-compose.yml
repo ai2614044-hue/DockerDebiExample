@@ -1,0 +1,37 @@
+version: "3.9"
+
+services:
+  # ── FastAPI Backend ───────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: facelock_backend
+    restart: unless-stopped
+    environment:
+      SQLITE_PATH: /data/facelock.db      # persistent volume
+      CORS_ORIGINS: "http://localhost:5173"
+      PORT: "8000"
+    ports:
+      - "8000:8000"
+    volumes:
+      - sqlite_data:/data                  # SQLite file survives restarts
+      - ./backend:/app                     # hot-reload in dev
+
+  # ── React Frontend (Vite dev server) ─────────────────────────────────────────
+  frontend:
+    image: node:20-alpine
+    container_name: facelock_frontend
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host"
+    volumes:
+      - ./frontend:/app
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_WS_URL: ws://localhost:8000
+    depends_on:
+      - backend
+
+volumes:
+  sqlite_data:
